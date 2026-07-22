@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import Group
 from rest_framework import serializers
 
 from accounts.models import User
@@ -16,6 +17,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             password=validated_data["password"]
         )
+        costumer_group = Group.objects.get(name="Customer")
+        user.groups.add(costumer_group)
+
         return user
 
 class LoginSerializer(serializers.Serializer):

@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'accounts',
     'rest_framework',
     'authentication',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
+    'products'
 
 ]
 
