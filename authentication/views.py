@@ -1,10 +1,11 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User
 from authentication.serializers import RegisterSerializer, LoginSerializer
 
 
@@ -27,8 +28,11 @@ class RegisterView(CreateAPIView):
             'access': str(refresh.access_token),
 
         })
-
+@extend_schema(request=LoginSerializer,)
 class LoginView(APIView):
+
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

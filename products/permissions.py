@@ -10,3 +10,8 @@ class IsSellerOrReadOnly(permissions.BasePermission):
             request.user.is_authenticated
             and request.user.groups.filter(name="Seller").exists()
         )
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.seller == request.user
