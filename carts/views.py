@@ -1,14 +1,14 @@
 from django.shortcuts import render
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from carts.models import CartItem
 
-from carts.serializers import CartItemSerializer, CartSerializer, AddToCartSerializer
+from carts.serializers import CartItemSerializer, CartSerializer, AddToCartSerializer, UpdateCartSerializer
 
 from carts.models import Cart
 
@@ -44,4 +44,21 @@ class AddToCartView(APIView):
                 "message": "Product added to cart"
             },
             status=status.HTTP_201_CREATED
+        )
+
+class UpdateCartAPIView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UpdateCartSerializer
+
+    def get_queryset(self):
+        return CartItem.objects.filter(
+            cart__user=self.request.user
+        )
+
+class DeleteCartAPIView(DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return CartItem.objects.filter(
+            cart__user=self.request.user
         )
