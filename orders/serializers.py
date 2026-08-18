@@ -31,6 +31,13 @@ class OrderSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+        read_only_fields = ('created_at', 'updated_at', 'status', 'user')
 
     def get_total_price(self, obj):
         return sum(item.subtotal for item in obj.items.all())
+
+class OrderStatusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Order
+        fields = ("status",)

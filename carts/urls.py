@@ -1,4 +1,6 @@
 from django.urls import path
+
+from orders.views import OrderPaymentAPIView
 from .views import MyCartView, AddToCartView, UpdateCartAPIView, DeleteCartAPIView
 
 urlpatterns = [
