@@ -38,6 +38,9 @@ class OrderPaymentTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "COMPLETED")
+
     def test_user_cannot_pay_another_user_order(self):
         another_user = User.objects.create_user(
             username="another_user",
@@ -50,3 +53,15 @@ class OrderPaymentTest(APITestCase):
         response = self.client.post(f'/api/orders/{self.order.id}/pay/')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unauthenticated_user_cannot_pay(self):
+        self.client.force_authenticate(user=None)
+
+        response = self.client.post(
+            f"/api/orders/{self.order.id}/pay/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED
+        )
