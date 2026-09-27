@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, UpdateAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -85,6 +85,29 @@ class OrderPaymentAPIView(APIView):
             )
 
         order.status = 'COMPLETED'
+        order.save(update_fields=['status', 'updated_at'])
+
+        return Response(
+            OrderSerializer(order).data,
+            status=status.HTTP_200_OK
+        )
+
+class OrderPaymentCancelAPIView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk, *args, **kwargs):
+        order = get_object_or_404(
+            Order,
+            pk=pk,
+            user=request.user,
+        )
+
+        if order.status != "PENDING":
+            raise ValidationError(
+                "Only pending orders can be canceled.",
+            )
+
+        order.status = 'CANCELED'
         order.save(update_fields=['status', 'updated_at'])
 
         return Response(
