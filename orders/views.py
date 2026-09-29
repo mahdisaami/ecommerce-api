@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from carts.models import Cart
 from orders.models import Order, OrderItem
 from orders.serializers import OrderSerializer, OrderStatusSerializer
+from products.models import Product
 
 
 class CheckoutAPIView(CreateAPIView):
@@ -17,7 +18,11 @@ class CheckoutAPIView(CreateAPIView):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        cart = Cart.objects.filter(user=request.user).first()
+        cart = (
+            Cart.objects.select_for_update()
+            .filter(user=request.user)
+            .first()
+        )
 
         if not cart or not cart.items.exists():
             return Response(
@@ -25,19 +30,45 @@ class CheckoutAPIView(CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        cart_items = list(
+            cart.items.select_related('product')
+        )
+
+        product_ids = [item.product.id for item in cart_items]
+
+        products = (
+            Product.objects
+            .select_for_update()
+            .filter(id__in=product_ids)
+        )
+
+        products_by_id = {
+            product.id: product
+            for product in products
+        }
+
+        for cart_item in cart_items:
+            product = products_by_id[cart_item.product.id]
+            if cart_item.quantity > product.stock:
+                raise ValidationError(
+                    f"Not enough stock for {product.name}"
+                )
+
         order = Order.objects.create(
             user = request.user,
             status = 'PENDING'
         )
 
-        for cart_item in cart.items.select_related('product'):
-            # Create order items based on cart items
+        for cart_item in cart_items:
+            product = products_by_id[cart_item.product.id]
             OrderItem.objects.create(
                 order = order,
                 quantity = cart_item.quantity,
-                product = cart_item.product,
-                price = cart_item.product.price
+                product = product,
+                price = product.price
             )
+            product.stock -= cart_item.quantity
+            product.save(update_fields=['stock'])
 
         cart.items.all().delete()
 

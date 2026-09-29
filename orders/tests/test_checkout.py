@@ -28,6 +28,7 @@ class CheckoutTests(APITestCase):
 
         self.cart = Cart.objects.create(user=self.user)
 
+
         self.cart_item = CartItem.objects.create(
             cart=self.cart,
             product=self.product,
@@ -92,4 +93,51 @@ class CheckoutTests(APITestCase):
         self.assertEqual(
             Order.objects.count(),
             0
+        )
+
+    def test_checkout_decreases_product_stock(self):
+        response = self.client.post(
+            "/api/orders/checkout/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(
+            self.product.stock,
+            98,
+        )
+
+    def test_checkout_fails_when_stock_is_insufficient(self):
+        self.product.stock = 1
+        self.product.save()
+
+        response = self.client.post(
+            "/api/orders/checkout/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(
+            self.product.stock,
+            1,
+        )
+
+        self.assertEqual(
+            Order.objects.count(),
+            0,
+        )
+
+        self.assertEqual(
+            self.cart.items.count(),
+            1,
         )
