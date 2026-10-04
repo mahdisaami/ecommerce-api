@@ -126,9 +126,10 @@ class OrderPaymentAPIView(APIView):
 class OrderPaymentCancelAPIView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @transaction.atomic
     def post(self, request, pk, *args, **kwargs):
         order = get_object_or_404(
-            Order,
+            Order.objects.select_for_update(),
             pk=pk,
             user=request.user,
         )
@@ -137,6 +138,23 @@ class OrderPaymentCancelAPIView(APIView):
             raise ValidationError(
                 "Only pending orders can be canceled.",
             )
+
+        order_items =  list(order.items.all())
+
+        product_ids = [item.product.id for item in order_items]
+
+
+        products = Product.objects.select_for_update().filter(id__in=product_ids)
+
+        products_by_id = {
+            product.id: product
+            for product in products
+        }
+
+        for order_item in order_items:
+            product = products_by_id[order_item.product.id]
+            product.stock += order_item.quantity
+            product.save(update_fields=['stock'])
 
         order.status = 'CANCELED'
         order.save(update_fields=['status', 'updated_at'])

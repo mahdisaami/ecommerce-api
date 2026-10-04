@@ -141,3 +141,32 @@ class CheckoutTests(APITestCase):
             self.cart.items.count(),
             1,
         )
+
+    def test_cancel_order_restores_product_stock(self):
+
+        # First, checkout to create an order
+        response = self.client.post('/api/orders/checkout/')
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        order = Order.objects.get(user=self.user)
+
+        self.product.refresh_from_db()
+        self.assertEqual(
+            self.product.stock,
+            98
+        )
+
+        # Now, cancel the order
+        response = self.client.post(f'/api/orders/{order.id}/cancel/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, "CANCELED")
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 100)  # Stock should be restored
